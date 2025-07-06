@@ -1,6 +1,6 @@
 import React from "react";
 
-const PedidoTabla = ({ pedidos }) => {
+const PedidoTabla = ({ pedidos, onEditar, onEliminar }) => {
   return (
     <table className="table table-bordered">
       <thead>
@@ -11,6 +11,7 @@ const PedidoTabla = ({ pedidos }) => {
           <th>📍 Partido</th>
           <th>📱 Teléfono</th>
           <th>📝 Pedido</th>
+          <th>⚙️ Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -22,6 +23,10 @@ const PedidoTabla = ({ pedidos }) => {
             <td>{p.partido}</td>
             <td>{p.telefono}</td>
             <td>{p.pedido}</td>
+            <td>
+              <button className="btn btn-sm btn-warning me-2" onClick={() => onEditar(p)}>Editar</button>
+              <button className="btn btn-sm btn-danger" onClick={() => onEliminar(p.id)}>Eliminar</button>
+            </td>
           </tr>
         ))}
       </tbody>

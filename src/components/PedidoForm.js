@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
+import Swal from "sweetalert2";
 
 const productosCatalogo = [
   { nombre: "LÁTEX BLANCO 20L Económico", precio: 24700 },
@@ -143,12 +144,16 @@ const handlePlaceChanged = () => {
   reset();
 };
 
-  return isLoaded ? (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-4">
-      <div className="row">
-        <div className="col-md-6">
+ return isLoaded ? (
+  <form onSubmit={handleSubmit(onSubmit)} className="mb-5">
+    <div className="row g-4">
+      {/* Datos del cliente */}
+      <div className="col-md-6">
+        <div className="card shadow-sm p-4">
+          <h5 className="mb-3">🧑 Datos del cliente</h5>
+
           <label>👤 Nombre</label>
-          <input {...register("nombre", { required: true })} className="form-control mb-2" />
+          <input {...register("nombre", { required: true })} className="form-control mb-3" />
 
           <label>🏠 Calle y Altura</label>
           <Autocomplete
@@ -157,31 +162,38 @@ const handlePlaceChanged = () => {
           >
             <input
               {...register("direccion", { required: true })}
-              className="form-control mb-2"
+              className="form-control mb-3"
               placeholder="Buscar dirección"
             />
           </Autocomplete>
 
-          <label>🗒️ Observación</label>
-          <input {...register("entreCalles" )} className="form-control mb-2" />
+          <label>🗒️ Observación (Entre calles)</label>
+          <input {...register("entreCalles")} className="form-control mb-3" />
 
           <label>🌆 Ciudad</label>
-          <input {...register("partido")} className="form-control mb-2" />
+          <input {...register("partido")} className="form-control mb-3" />
 
           <label>📞 Teléfono</label>
-          <input {...register("telefono")} className="form-control mb-2" />
+          <input {...register("telefono")} className="form-control mb-3" />
         </div>
+      </div>
 
-        <div className="col-md-6">
-          <label>🧾 Seleccionar productos</label>
-          <div className="mb-2">
+      {/* Productos y pedido */}
+      <div className="col-md-6">
+        <div className="card shadow-sm p-4">
+          <h5 className="mb-3">🛒 Productos</h5>
+
+          <div
+            className="mb-3 border rounded p-2"
+            style={{ maxHeight: "300px", overflowY: "auto" }}
+          >
             {productosCatalogo.map((prod, idx) => (
               <div key={idx} className="form-check">
                 <input
                   type="checkbox"
                   className="form-check-input"
                   id={`prod-${idx}`}
-                  checked={!!productosSeleccionados.find(p => p.nombre === prod.nombre)}
+                  checked={!!productosSeleccionados.find((p) => p.nombre === prod.nombre)}
                   onChange={() => toggleProducto(prod)}
                 />
                 <label htmlFor={`prod-${idx}`} className="form-check-label">
@@ -193,18 +205,25 @@ const handlePlaceChanged = () => {
 
           <label>📝 Pedido generado</label>
           <textarea
-            className="form-control"
-            value={calcularResumenPedido().resumen + (productosSeleccionados.length ? ` | TOTAL: $${calcularResumenPedido().total}` : "")}
+            className="form-control mb-3"
+            value={
+              calcularResumenPedido().resumen +
+              (productosSeleccionados.length ? ` | TOTAL: $${calcularResumenPedido().total}` : "")
+            }
             readOnly
             rows={4}
           />
+
+          <button type="submit" className="btn btn-success w-100 fw-bold">
+            ✅ Agregar Pedido
+          </button>
         </div>
       </div>
-      <button type="submit" className="btn btn-primary mt-3">Agregar Pedido</button>
-    </form>
-  ) : (
-    <p>Cargando Google Maps...</p>
-  );
+    </div>
+  </form>
+) : (
+  <p>Cargando Google Maps...</p>
+);
 };
 
 export default PedidoForm;
