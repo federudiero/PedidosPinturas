@@ -92,28 +92,33 @@ const productosCatalogo = [
 ];
 
 const PedidoForm = ({ onAgregar }) => {
-  const { register, handleSubmit, reset, setValue } = useForm();
+  const { handleSubmit, reset, setValue } = useForm();
   const autoCompleteRef = useRef(null);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
+
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [partido, setPartido] = useState("");
+
+  const [errorNombre, setErrorNombre] = useState("");
+  const [errorTelefono, setErrorTelefono] = useState("");
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: ["places"]
   });
 
-const handlePlaceChanged = () => {
-  const place = autoCompleteRef.current.getPlace();
+  const handlePlaceChanged = () => {
+    const place = autoCompleteRef.current.getPlace();
+    const direccionCompleta = place.formatted_address || "";
+    const plusCode = place.plus_code?.global_code || "";
 
-  const direccionCompleta = place.formatted_address || "";
-  const plusCode = place.plus_code?.global_code || "";
+    const direccionFinal = plusCode
+      ? `${plusCode} - ${direccionCompleta}`
+      : direccionCompleta;
 
-  // Si hay plusCode, anteponerlo a la dirección
-  const direccionFinal = plusCode
-    ? `${plusCode} - ${direccionCompleta}`
-    : direccionCompleta;
-
-  setValue("direccion", direccionFinal);
-};
+    setValue("direccion", direccionFinal);
+  };
 
   const toggleProducto = (producto) => {
     const yaSeleccionado = productosSeleccionados.find(p => p.nombre === producto.nombre);
@@ -130,100 +135,141 @@ const handlePlaceChanged = () => {
     return { resumen, total };
   };
 
- const onSubmit = (data) => {
-  const { resumen, total } = calcularResumenPedido();
-  const pedidoFinal = `${resumen} | TOTAL: $${total}`;
+  const onSubmit = (data) => {
+    if (errorNombre || errorTelefono) {
+      return Swal.fire("❌ Corregí los errores antes de enviar el pedido.");
+    }
 
-  const pedidoConProductos = {
-    ...data,
-    pedido: pedidoFinal
+    const { resumen, total } = calcularResumenPedido();
+    const pedidoFinal = `${resumen} | TOTAL: $${total}`;
+
+    const pedidoConProductos = {
+      ...data,
+      nombre,
+      telefono,
+      partido,
+      pedido: pedidoFinal
+    };
+
+    onAgregar(pedidoConProductos);
+    setProductosSeleccionados([]);
+    reset();
+    setNombre("");
+    setTelefono("");
+    setPartido("");
   };
 
-  onAgregar(pedidoConProductos);
-  setProductosSeleccionados([]);
-  reset();
-};
+  return isLoaded ? (
+    <form onSubmit={handleSubmit(onSubmit)} className="mb-5">
+      <div className="row g-4">
+        <div className="col-md-6">
+          <div className="card shadow-sm p-4">
+            <h5 className="mb-3">🧑 Datos del cliente</h5>
 
- return isLoaded ? (
-  <form onSubmit={handleSubmit(onSubmit)} className="mb-5">
-    <div className="row g-4">
-      {/* Datos del cliente */}
-      <div className="col-md-6">
-        <div className="card shadow-sm p-4">
-          <h5 className="mb-3">🧑 Datos del cliente</h5>
-
-          <label>👤 Nombre</label>
-          <input {...register("nombre", { required: true })} className="form-control mb-3" />
-
-          <label>🏠 Calle y Altura</label>
-          <Autocomplete
-            onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)}
-            onPlaceChanged={handlePlaceChanged}
-          >
+            <label>👤 Nombre</label>
             <input
-              {...register("direccion", { required: true })}
-              className="form-control mb-3"
-              placeholder="Buscar dirección"
+              className="form-control mb-1"
+              value={nombre}
+              onChange={(e) => {
+                const val = e.target.value;
+                setNombre(val);
+                if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val)) {
+                  setErrorNombre("❌ Solo letras y espacios.");
+                } else {
+                  setErrorNombre("");
+                }
+              }}
             />
-          </Autocomplete>
+            {errorNombre && <small className="text-danger">{errorNombre}</small>}
 
-          <label>🗒️ Observación (Entre calles)</label>
-          <input {...register("entreCalles")} className="form-control mb-3" />
+            <label className="mt-3">🏠 Calle y Altura</label>
+            <Autocomplete
+              onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)}
+              onPlaceChanged={handlePlaceChanged}
+            >
+              <input
+                className="form-control mb-3"
+                {...setValue("direccion", "")}
+                placeholder="Buscar dirección"
+              />
+            </Autocomplete>
 
-          <label>🌆 Ciudad</label>
-          <input {...register("partido")} className="form-control mb-3" />
+            <label>🗒️ Observación (Entre calles)</label>
+            <input {...setValue("entreCalles", "")} className="form-control mb-3" />
 
-          <label>📞 Teléfono</label>
-          <input {...register("telefono")} className="form-control mb-3" />
-        </div>
-      </div>
+            <label>🌆 Ciudad</label>
+            <input
+              className="form-control mb-3"
+              value={partido}
+              onChange={(e) => setPartido(e.target.value)}
+              placeholder="Ciudad o localidad"
+            />
 
-      {/* Productos y pedido */}
-      <div className="col-md-6">
-        <div className="card shadow-sm p-4">
-          <h5 className="mb-3">🛒 Productos</h5>
-
-          <div
-            className="mb-3 border rounded p-2"
-            style={{ maxHeight: "300px", overflowY: "auto" }}
-          >
-            {productosCatalogo.map((prod, idx) => (
-              <div key={idx} className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id={`prod-${idx}`}
-                  checked={!!productosSeleccionados.find((p) => p.nombre === prod.nombre)}
-                  onChange={() => toggleProducto(prod)}
-                />
-                <label htmlFor={`prod-${idx}`} className="form-check-label">
-                  {prod.nombre} - ${prod.precio.toLocaleString()}
-                </label>
-              </div>
-            ))}
+            <label className="mt-3">📞 Teléfono</label>
+            <input
+              className="form-control mb-1"
+              value={telefono}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "");
+                setTelefono(val);
+                if (!/^[0-9]{6,15}$/.test(val)) {
+                  setErrorTelefono("❌ Solo números (6 a 15 dígitos).");
+                } else {
+                  setErrorTelefono("");
+                }
+              }}
+            />
+            {errorTelefono && <small className="text-danger">{errorTelefono}</small>}
           </div>
+        </div>
 
-          <label>📝 Pedido generado</label>
-          <textarea
-            className="form-control mb-3"
-            value={
-              calcularResumenPedido().resumen +
-              (productosSeleccionados.length ? ` | TOTAL: $${calcularResumenPedido().total}` : "")
-            }
-            readOnly
-            rows={4}
-          />
+        <div className="col-md-6">
+          <div className="card shadow-sm p-4">
+            <h5 className="mb-3">🛒 Productos</h5>
 
-          <button type="submit" className="btn btn-success w-100 fw-bold">
-            ✅ Agregar Pedido
-          </button>
+            <div
+              className="mb-3 border rounded p-2"
+              style={{ maxHeight: "300px", overflowY: "auto" }}
+            >
+              {productosCatalogo.map((prod, idx) => (
+                <div key={idx} className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id={`prod-${idx}`}
+                    checked={!!productosSeleccionados.find((p) => p.nombre === prod.nombre)}
+                    onChange={() => toggleProducto(prod)}
+                  />
+                  <label htmlFor={`prod-${idx}`} className="form-check-label">
+                    {prod.nombre} - ${prod.precio.toLocaleString()}
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <label>📝 Pedido generado</label>
+            <textarea
+              className="form-control mb-3"
+              value={
+                calcularResumenPedido().resumen +
+                (productosSeleccionados.length
+                  ? ` | TOTAL: $${calcularResumenPedido().total}`
+                  : "")
+              }
+              readOnly
+              rows={4}
+            />
+
+            <button type="submit" className="btn btn-success w-100 fw-bold">
+              ✅ Agregar Pedido
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </form>
-) : (
-  <p>Cargando Google Maps...</p>
-);
+    </form>
+  ) : (
+    <p>Cargando Google Maps...</p>
+  );
 };
 
 export default PedidoForm;

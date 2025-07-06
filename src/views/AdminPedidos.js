@@ -29,17 +29,24 @@ function AdminPedidos() {
     });
   };
 
-  const cargarPedidosPorFecha = async (fecha) => {
-    setLoading(true);
-    const inicio = Timestamp.fromDate(startOfDay(fecha));
-    const fin = Timestamp.fromDate(endOfDay(fecha));
-    const pedidosRef = collection(db, "pedidos");
-    const q = query(pedidosRef, where("fecha", ">=", inicio), where("fecha", "<=", fin));
-    const querySnapshot = await getDocs(q);
-    const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    setPedidos(data);
-    setLoading(false);
-  };
+ const cargarPedidosPorFecha = async (fecha) => {
+  setLoading(true);
+  const inicio = Timestamp.fromDate(startOfDay(fecha));
+  const fin = Timestamp.fromDate(endOfDay(fecha));
+  const pedidosRef = collection(db, "pedidos");
+  const q = query(pedidosRef, where("fecha", ">=", inicio), where("fecha", "<=", fin));
+  const querySnapshot = await getDocs(q);
+
+  const data = querySnapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .filter((pedido) => {
+      const ciudad = pedido.partido?.toLowerCase();
+      return ciudad === "cordoba" || ciudad === "córdoba" || ciudad === "buenos aires";
+    });
+
+  setPedidos(data);
+  setLoading(false);
+};
 
   useEffect(() => {
     const adminAuth = localStorage.getItem("adminAutenticado");
