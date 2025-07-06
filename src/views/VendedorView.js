@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from "react";
 import PedidoForm from "../components/PedidoForm";
 import { db, auth } from "../firebase/firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { format } from "date-fns";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { FaMoon, FaSun } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function VendedorView() {
   const [usuario, setUsuario] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("modoOscuro") === "true";
   });
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
+  const [cantidadPedidos, setCantidadPedidos] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +36,28 @@ function VendedorView() {
     return () => unsubscribe();
   }, [navigate]);
 
+  const cargarCantidadPedidos = async (fecha) => {
+    const inicio = Timestamp.fromDate(startOfDay(fecha));
+    const fin = Timestamp.fromDate(endOfDay(fecha));
+    const pedidosRef = collection(db, "pedidos");
+
+    const q = query(
+      pedidosRef,
+      where("fecha", ">=", inicio),
+      where("fecha", "<=", fin),
+      where("vendedorEmail", "==", usuario?.email || "")
+    );
+
+    const querySnapshot = await getDocs(q);
+    setCantidadPedidos(querySnapshot.docs.length);
+  };
+
+  useEffect(() => {
+    if (usuario) {
+      cargarCantidadPedidos(fechaSeleccionada);
+    }
+  }, [fechaSeleccionada, usuario]);
+
   const agregarPedido = async (pedido) => {
     const fechaAhora = new Date();
     await addDoc(collection(db, "pedidos"), {
@@ -33,6 +66,7 @@ function VendedorView() {
       fecha: Timestamp.fromDate(fechaAhora),
       fechaStr: format(fechaAhora, "dd/MM/yyyy HH:mm"),
     });
+    cargarCantidadPedidos(fechaSeleccionada);
   };
 
   const handleLogout = async () => {
@@ -60,6 +94,19 @@ function VendedorView() {
             <button className="btn btn-danger" onClick={handleLogout}>
               Cerrar sesión
             </button>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="me-2 fw-bold">📅 Ver cantidad de pedidos del día:</label>
+          <DatePicker
+            selected={fechaSeleccionada}
+            onChange={(fecha) => setFechaSeleccionada(fecha)}
+            className="form-control d-inline-block w-auto"
+            dateFormat="dd/MM/yyyy"
+          />
+          <div className="mt-2">
+            <strong>Pedidos cargados ese día:</strong> {cantidadPedidos}
           </div>
         </div>
 

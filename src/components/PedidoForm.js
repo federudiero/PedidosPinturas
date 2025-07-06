@@ -197,7 +197,7 @@ const PedidoForm = ({ onAgregar }) => {
             <label>🗒️ Observación (Entre calles)</label>
             <input {...setValue("entreCalles", "")} className="form-control mb-3" />
 
-            <label>🌆 Ciudad</label>
+            <label>🌆 Ciudad o partido</label>
             <input
               className="form-control mb-3"
               value={partido}
