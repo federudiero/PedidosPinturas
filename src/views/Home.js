@@ -25,6 +25,13 @@ function Home() {
           🛠️ Ingreso Administrador
         </button>
       </div>
+
+      <button
+  className="btn btn-success btn-lg"
+  onClick={() => navigate("/login-repartidor")}
+>
+  🚚 Ingreso Repartidor
+</button>
     </div>
   );
 }

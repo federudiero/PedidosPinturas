@@ -5,6 +5,8 @@ import AdminLogin from "./views/AdminLogin";
 import AdminPedidos from "./views/AdminPedidos";
 import LoginVendedor from "./views/LoginVendedor";
 import Home from "./views/Home";
+import RepartidorView from "./views/RepartidorView";
+import LoginRepartidor from "./views/LoginRepartidor";
 
 
 function App() {
@@ -16,6 +18,9 @@ function App() {
         <Route path="/vendedor" element={<VendedorView />} /> {/* 👈 antes era "/" */}
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/pedidos" element={<AdminPedidos />} />
+        
+<Route path="/login-repartidor" element={<LoginRepartidor />} />
+<Route path="/repartidor" element={<RepartidorView />} />
       </Routes>
     </Router>
   );
