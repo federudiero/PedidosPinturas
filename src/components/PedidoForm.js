@@ -92,13 +92,15 @@ const productosCatalogo = [
 ];
 
 const PedidoForm = ({ onAgregar }) => {
-  const { handleSubmit, reset, setValue } = useForm();
+  const { handleSubmit, reset } = useForm();
   const autoCompleteRef = useRef(null);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
 
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [partido, setPartido] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [entreCalles, setEntreCalles] = useState("");
 
   const [errorNombre, setErrorNombre] = useState("");
   const [errorTelefono, setErrorTelefono] = useState("");
@@ -117,7 +119,7 @@ const PedidoForm = ({ onAgregar }) => {
       ? `${plusCode} - ${direccionCompleta}`
       : direccionCompleta;
 
-    setValue("direccion", direccionFinal);
+    setDireccion(direccionFinal);
   };
 
   const toggleProducto = (producto) => {
@@ -135,7 +137,7 @@ const PedidoForm = ({ onAgregar }) => {
     return { resumen, total };
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = () => {
     if (errorNombre || errorTelefono) {
       return Swal.fire("❌ Corregí los errores antes de enviar el pedido.");
     }
@@ -144,10 +146,11 @@ const PedidoForm = ({ onAgregar }) => {
     const pedidoFinal = `${resumen} | TOTAL: $${total}`;
 
     const pedidoConProductos = {
-      ...data,
       nombre,
       telefono,
       partido,
+      direccion,
+      entreCalles,
       pedido: pedidoFinal
     };
 
@@ -157,6 +160,8 @@ const PedidoForm = ({ onAgregar }) => {
     setNombre("");
     setTelefono("");
     setPartido("");
+    setDireccion("");
+    setEntreCalles("");
   };
 
   return isLoaded ? (
@@ -189,13 +194,19 @@ const PedidoForm = ({ onAgregar }) => {
             >
               <input
                 className="form-control mb-3"
-                {...setValue("direccion", "")}
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
                 placeholder="Buscar dirección"
               />
             </Autocomplete>
 
             <label>🗒️ Observación (Entre calles)</label>
-            <input {...setValue("entreCalles", "")} className="form-control mb-3" />
+            <input
+              className="form-control mb-3"
+              value={entreCalles}
+              onChange={(e) => setEntreCalles(e.target.value)}
+              placeholder="Ej: entre calles"
+            />
 
             <label>🌆 Ciudad o partido</label>
             <input
