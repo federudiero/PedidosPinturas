@@ -1,5 +1,5 @@
 // src/views/RepartidorView.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase/firebase";
 import {
   collection,
@@ -38,14 +38,9 @@ function RepartidorView() {
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setPedidos(data);
 
-    // Leer gasto extra del día
     const fechaId = format(fecha, 'yyyy-MM-dd');
     const gastoDoc = await getDoc(doc(db, "gastosReparto", fechaId));
-    if (gastoDoc.exists()) {
-      setGastoExtra(gastoDoc.data().monto || 0);
-    } else {
-      setGastoExtra(0);
-    }
+    setGastoExtra(gastoDoc.exists() ? gastoDoc.data().monto || 0 : 0);
   };
 
   useEffect(() => {
@@ -56,23 +51,17 @@ function RepartidorView() {
 
   const marcarEntregado = async (id, entregado) => {
     await updateDoc(doc(db, "pedidos", id), { entregado });
-    setPedidos(prev =>
-      prev.map(p => (p.id === id ? { ...p, entregado } : p))
-    );
+    setPedidos(prev => prev.map(p => (p.id === id ? { ...p, entregado } : p)));
   };
 
   const actualizarMetodoPago = async (id, metodoPago) => {
     await updateDoc(doc(db, "pedidos", id), { metodoPago });
-    setPedidos(prev =>
-      prev.map(p => (p.id === id ? { ...p, metodoPago } : p))
-    );
+    setPedidos(prev => prev.map(p => (p.id === id ? { ...p, metodoPago } : p)));
   };
 
   const actualizarComprobante = async (id, comprobante) => {
     await updateDoc(doc(db, "pedidos", id), { comprobante });
-    setPedidos(prev =>
-      prev.map(p => (p.id === id ? { ...p, comprobante } : p))
-    );
+    setPedidos(prev => prev.map(p => (p.id === id ? { ...p, comprobante } : p)));
   };
 
   const actualizarGastoExtra = async (valor) => {
@@ -82,18 +71,61 @@ function RepartidorView() {
     await setDoc(doc(db, "gastosReparto", fechaId), { monto: num });
   };
 
+  const totales = useMemo(() => {
+    let totalEfectivo = 0;
+    let totalTransferencia = 0;
+    let totalTarjeta = 0;
+
+    pedidos.forEach(p => {
+      if (!p.entregado || typeof p.pedido !== "string") return;
+      const match = p.pedido.match(/TOTAL: \$?(\d+)/);
+      let monto = match ? parseInt(match[1]) : 0;
+
+      if (p.metodoPago === "transferencia") {
+        monto *= 1.1;
+        totalTransferencia += monto;
+      } else if (p.metodoPago === "tarjeta") {
+        monto *= 1.1;
+        totalTarjeta += monto;
+      } else if (p.metodoPago === "efectivo") {
+        totalEfectivo += monto;
+      }
+    });
+
+    const totalFinal = totalEfectivo + totalTransferencia + totalTarjeta - gastoExtra;
+
+    return { totalEfectivo, totalTransferencia, totalTarjeta, totalFinal };
+  }, [pedidos, gastoExtra]);
+
   const exportarEntregadosAExcel = () => {
     const entregados = pedidos.filter(p => p.entregado);
-    const data = entregados.map(p => ({
-      Nombre: p.nombre,
-      Dirección: p.direccion,
-      Teléfono: p.telefono,
-      Pedido: p.pedido,
-      Fecha: p.fechaStr || "",
-      MétodoPago: p.metodoPago || "",
-      Comprobante: p.comprobante || "",
-      GastoExtra: gastoExtra || 0
-    }));
+    const data = entregados.map(p => {
+      const match = typeof p.pedido === "string" ? p.pedido.match(/TOTAL: \$?(\d+)/) : null;
+      let monto = match ? parseInt(match[1]) : 0;
+
+      if (p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") {
+        monto *= 1.1;
+      }
+
+      return {
+        Nombre: p.nombre,
+        Dirección: p.direccion,
+        Teléfono: p.telefono,
+        Pedido: p.pedido,
+        Fecha: p.fechaStr || "",
+        MétodoPago: p.metodoPago || "",
+        Comprobante: p.comprobante || "",
+        MontoCalculado: `$${monto.toLocaleString()}`
+      };
+    });
+
+    data.push({},
+      { Nombre: "💵 Total Efectivo", MontoCalculado: `$${totales.totalEfectivo.toLocaleString()}` },
+      { Nombre: "🏦 Total Transferencia (+10%)", MontoCalculado: `$${totales.totalTransferencia.toLocaleString()}` },
+      { Nombre: "💳 Total Tarjeta (+10%)", MontoCalculado: `$${totales.totalTarjeta.toLocaleString()}` },
+      { Nombre: "⛽ Gasto Extra", MontoCalculado: `-$${gastoExtra.toLocaleString()}` },
+      { Nombre: "💰 Total Neto Recaudado", MontoCalculado: `$${totales.totalFinal.toLocaleString()}` }
+    );
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -101,8 +133,7 @@ function RepartidorView() {
 
     const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-
-    saveAs(blob, `Entregados_${new Date().toLocaleDateString()}.xlsx`);
+    saveAs(blob, `Entregados_${format(fechaSeleccionada, 'yyyy-MM-dd')}.xlsx`);
   };
 
   return (
@@ -134,36 +165,15 @@ function RepartidorView() {
             <tr key={p.id}>
               <td>{p.nombre}</td>
               <td>
-                {p.direccion}{" "}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Ver en Google Maps"
-                >
-                  <FaMapMarkerAlt className="text-primary ms-2" />
-                </a>
+                {p.direccion} <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`} target="_blank" rel="noopener noreferrer"><FaMapMarkerAlt className="text-primary ms-2" /></a>
               </td>
               <td>{p.telefono}</td>
               <td>{p.pedido}</td>
               <td>
-                <div className="d-flex align-items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={!!p.entregado}
-                    onChange={(e) => marcarEntregado(p.id, e.target.checked)}
-                  />
-                  <span className={p.entregado ? "text-success" : "text-danger"}>
-                    {p.entregado ? "Entregado" : "No entregado"}
-                  </span>
-                </div>
+                <input type="checkbox" checked={!!p.entregado} onChange={(e) => marcarEntregado(p.id, e.target.checked)} />
               </td>
               <td>
-                <select
-                  className="form-select"
-                  value={p.metodoPago || ""}
-                  onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}
-                >
+                <select className="form-select" value={p.metodoPago || ""} onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}>
                   <option value="">Seleccionar</option>
                   <option value="efectivo">Efectivo</option>
                   <option value="transferencia">Transferencia</option>
@@ -171,13 +181,8 @@ function RepartidorView() {
                 </select>
               </td>
               <td>
-                {(p.metodoPago === "tarjeta" || p.metodoPago === "transferencia") && (
-                  <input
-                    className="form-control"
-                    placeholder="N° comprobante"
-                    value={p.comprobante || ""}
-                    onChange={(e) => actualizarComprobante(p.id, e.target.value)}
-                  />
+                {(p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") && (
+                  <input className="form-control" placeholder="N° comprobante" value={p.comprobante || ""} onChange={(e) => actualizarComprobante(p.id, e.target.value)} />
                 )}
               </td>
             </tr>
@@ -187,12 +192,7 @@ function RepartidorView() {
 
       <div className="mt-3">
         <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
-        <input
-          type="number"
-          className="form-control w-auto"
-          value={gastoExtra}
-          onChange={(e) => actualizarGastoExtra(e.target.value)}
-        />
+        <input type="number" className="form-control w-auto" value={gastoExtra} onChange={(e) => actualizarGastoExtra(e.target.value)} />
       </div>
 
       <div className="mt-3">
@@ -200,17 +200,11 @@ function RepartidorView() {
       </div>
 
       <div className="mt-3">
-        <strong>💰 Total recaudado (entregados):</strong>{" "}
-        ${(
-          pedidos.filter(p => p.entregado).reduce((sum, p) => {
-            const match = typeof p.pedido === "string" ? p.pedido.match(/TOTAL: \$?(\d+)/) : null;
-            let total = match ? parseInt(match[1]) : 0;
-            if (p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") {
-              total *= 1.1;
-            }
-            return sum + total;
-          }, 0) - gastoExtra
-        ).toLocaleString()}
+        <strong>💵 Total efectivo:</strong> ${totales.totalEfectivo.toLocaleString()} <br />
+        <strong>🏦 Total transferencia (+10%):</strong> ${totales.totalTransferencia.toLocaleString()} <br />
+        <strong>💳 Total tarjeta (+10%):</strong> ${totales.totalTarjeta.toLocaleString()} <br />
+        <strong>⛽ Gasto extra:</strong> -${gastoExtra.toLocaleString()} <br />
+        <strong>💰 Total recaudado neto:</strong> ${totales.totalFinal.toLocaleString()}
       </div>
 
       <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
