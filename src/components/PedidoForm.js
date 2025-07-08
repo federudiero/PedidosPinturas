@@ -131,11 +131,13 @@ const PedidoForm = ({ onAgregar }) => {
     }
   };
 
-  const calcularResumenPedido = () => {
-    const resumen = productosSeleccionados.map(p => `${p.nombre} ($${p.precio})`).join(" - ");
-    const total = productosSeleccionados.reduce((sum, p) => sum + p.precio, 0);
-    return { resumen, total };
-  };
+const calcularResumenPedido = () => {
+  const resumen = productosSeleccionados
+    .map(p => `${p.nombre} x${p.cantidad} ($${p.precio * p.cantidad})`)
+    .join(" - ");
+  const total = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+  return { resumen, total };
+};
 
   const onSubmit = () => {
     if (errorNombre || errorTelefono) {
@@ -242,20 +244,35 @@ const PedidoForm = ({ onAgregar }) => {
               className="mb-3 border rounded p-2"
               style={{ maxHeight: "300px", overflowY: "auto" }}
             >
-              {productosCatalogo.map((prod, idx) => (
-                <div key={idx} className="form-check">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id={`prod-${idx}`}
-                    checked={!!productosSeleccionados.find((p) => p.nombre === prod.nombre)}
-                    onChange={() => toggleProducto(prod)}
-                  />
-                  <label htmlFor={`prod-${idx}`} className="form-check-label">
-                    {prod.nombre} - ${prod.precio.toLocaleString()}
-                  </label>
-                </div>
-              ))}
+             {productosCatalogo.map((prod, idx) => {
+  const cantidad = productosSeleccionados.find(p => p.nombre === prod.nombre)?.cantidad || 0;
+
+  return (
+    <div key={idx} className="d-flex align-items-center justify-content-between mb-2">
+      <div>
+        <strong>{prod.nombre}</strong> - ${prod.precio.toLocaleString()}
+      </div>
+      <input
+        type="number"
+        min="0"
+        value={cantidad}
+        onChange={(e) => {
+          const cantidad = parseInt(e.target.value, 10);
+          setProductosSeleccionados((prev) => {
+            const sinEste = prev.filter(p => p.nombre !== prod.nombre);
+            if (cantidad > 0) {
+              return [...sinEste, { ...prod, cantidad }];
+            } else {
+              return sinEste;
+            }
+          });
+        }}
+        className="form-control ms-2"
+        style={{ width: "70px" }}
+      />
+    </div>
+  );
+})}
             </div>
 
             <label>📝 Pedido generado</label>

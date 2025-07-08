@@ -31,8 +31,16 @@ function AdminPedidos() {
 
  const cargarPedidosPorFecha = async (fecha) => {
   setLoading(true);
-  const inicio = Timestamp.fromDate(startOfDay(fecha));
-  const fin = Timestamp.fromDate(endOfDay(fecha));
+
+  const start = new Date(fecha);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(fecha);
+  end.setHours(23, 59, 59, 999);
+
+  const inicio = Timestamp.fromDate(start);
+  const fin = Timestamp.fromDate(end);
+
   const pedidosRef = collection(db, "pedidos");
   const q = query(pedidosRef, where("fecha", ">=", inicio), where("fecha", "<=", fin));
   const querySnapshot = await getDocs(q);
