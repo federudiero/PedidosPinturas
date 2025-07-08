@@ -69,18 +69,25 @@ function RepartidorView() {
               <td>{p.direccion}</td>
               <td>{p.telefono}</td>
               <td>{p.pedido}</td>
-              <td>
-                <input
-                  type="checkbox"
-                  checked={!!p.entregado}
-                  onChange={(e) => marcarEntregado(p.id, e.target.checked)}
-                />
-              </td>
+             <td>
+  <div className="d-flex align-items-center gap-2">
+    <input
+      type="checkbox"
+      checked={!!p.entregado}
+      onChange={(e) => marcarEntregado(p.id, e.target.checked)}
+    />
+    <span className={p.entregado ? "text-success" : "text-danger"}>
+      {p.entregado ? "Entregado" : "No entregado"}
+    </span>
+  </div>
+</td>
             </tr>
           ))}
         </tbody>
       </table>
-
+<div className="mt-3">
+  <strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}
+</div>
       <button className="btn btn-outline-danger mt-3" onClick={() => {
         localStorage.removeItem("repartidorAutenticado");
         navigate("/login-repartidor");
