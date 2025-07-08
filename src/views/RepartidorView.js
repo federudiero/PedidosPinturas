@@ -2,9 +2,17 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebase";
 import {
-  collection, getDocs, query, where, updateDoc, doc, Timestamp
+  collection,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  doc,
+  Timestamp,
+  setDoc,
+  getDoc
 } from "firebase/firestore";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -16,6 +24,7 @@ function RepartidorView() {
   const navigate = useNavigate();
   const [pedidos, setPedidos] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
+  const [gastoExtra, setGastoExtra] = useState(0);
 
   const cargarPedidos = async (fecha) => {
     const inicio = Timestamp.fromDate(startOfDay(fecha));
@@ -28,6 +37,15 @@ function RepartidorView() {
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setPedidos(data);
+
+    // Leer gasto extra del día
+    const fechaId = format(fecha, 'yyyy-MM-dd');
+    const gastoDoc = await getDoc(doc(db, "gastosReparto", fechaId));
+    if (gastoDoc.exists()) {
+      setGastoExtra(gastoDoc.data().monto || 0);
+    } else {
+      setGastoExtra(0);
+    }
   };
 
   useEffect(() => {
@@ -57,6 +75,13 @@ function RepartidorView() {
     );
   };
 
+  const actualizarGastoExtra = async (valor) => {
+    const num = parseInt(valor) || 0;
+    setGastoExtra(num);
+    const fechaId = format(fechaSeleccionada, 'yyyy-MM-dd');
+    await setDoc(doc(db, "gastosReparto", fechaId), { monto: num });
+  };
+
   const exportarEntregadosAExcel = () => {
     const entregados = pedidos.filter(p => p.entregado);
     const data = entregados.map(p => ({
@@ -67,6 +92,7 @@ function RepartidorView() {
       Fecha: p.fechaStr || "",
       MétodoPago: p.metodoPago || "",
       Comprobante: p.comprobante || "",
+      GastoExtra: gastoExtra || 0
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -146,13 +172,13 @@ function RepartidorView() {
               </td>
               <td>
                 {(p.metodoPago === "tarjeta" || p.metodoPago === "transferencia") && (
-  <input
-    className="form-control"
-    placeholder="N° comprobante"
-    value={p.comprobante || ""}
-    onChange={(e) => actualizarComprobante(p.id, e.target.value)}
-  />
-)}
+                  <input
+                    className="form-control"
+                    placeholder="N° comprobante"
+                    value={p.comprobante || ""}
+                    onChange={(e) => actualizarComprobante(p.id, e.target.value)}
+                  />
+                )}
               </td>
             </tr>
           ))}
@@ -160,21 +186,31 @@ function RepartidorView() {
       </table>
 
       <div className="mt-3">
+        <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
+        <input
+          type="number"
+          className="form-control w-auto"
+          value={gastoExtra}
+          onChange={(e) => actualizarGastoExtra(e.target.value)}
+        />
+      </div>
+
+      <div className="mt-3">
         <strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}
       </div>
 
       <div className="mt-3">
         <strong>💰 Total recaudado (entregados):</strong>{" "}
-        ${pedidos
-          .filter(p => p.entregado)
-          .reduce((sum, p) => {
+        ${(
+          pedidos.filter(p => p.entregado).reduce((sum, p) => {
             const match = typeof p.pedido === "string" ? p.pedido.match(/TOTAL: \$?(\d+)/) : null;
             let total = match ? parseInt(match[1]) : 0;
             if (p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") {
               total *= 1.1;
             }
             return sum + total;
-          }, 0).toLocaleString()}
+          }, 0) - gastoExtra
+        ).toLocaleString()}
       </div>
 
       <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
