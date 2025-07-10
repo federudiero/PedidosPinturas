@@ -2,6 +2,8 @@ import React, { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import Swal from "sweetalert2";
+import { GoogleMap, Marker } from "@react-google-maps/api";
+
 
 const productosCatalogo = [
   { nombre: "LÁTEX BLANCO 20L Económico", precio: 24700 },
@@ -92,6 +94,7 @@ const productosCatalogo = [
 ];
 
 const PedidoForm = ({ onAgregar }) => {
+  const [coordenadas, setCoordenadas] = useState(null);
   const { handleSubmit, reset } = useForm();
   const autoCompleteRef = useRef(null);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
@@ -111,17 +114,24 @@ const PedidoForm = ({ onAgregar }) => {
   });
 
   const handlePlaceChanged = () => {
-    const place = autoCompleteRef.current.getPlace();
-    const direccionCompleta = place.formatted_address || "";
-    const plusCode = place.plus_code?.global_code || "";
+  const place = autoCompleteRef.current.getPlace();
+  const direccionCompleta = place.formatted_address || "";
+  const plusCode = place.plus_code?.global_code || "";
+  const direccionFinal = plusCode
+    ? `${plusCode} - ${direccionCompleta}`
+    : direccionCompleta;
 
-    const direccionFinal = plusCode
-      ? `${plusCode} - ${direccionCompleta}`
-      : direccionCompleta;
+  setDireccion(direccionFinal);
 
-    setDireccion(direccionFinal);
-  };
-
+  // Extraer coordenadas
+  const location = place.geometry?.location;
+  if (location) {
+    setCoordenadas({
+      lat: location.lat(),
+      lng: location.lng()
+    });
+  }
+};
   const toggleProducto = (producto) => {
     const yaSeleccionado = productosSeleccionados.find(p => p.nombre === producto.nombre);
     if (yaSeleccionado) {
@@ -201,6 +211,18 @@ const calcularResumenPedido = () => {
                 placeholder="Buscar dirección"
               />
             </Autocomplete>
+            {coordenadas && (
+  <div className="mb-3" style={{ height: "200px" }}>
+    <GoogleMap
+      mapContainerStyle={{ width: "100%", height: "100%" }}
+      center={coordenadas}
+      zoom={16}
+    >
+      <Marker position={coordenadas} />
+    </GoogleMap>
+  </div>
+)}
+
 
             <label>🗒️ Observación (Entre calles)</label>
             <input
