@@ -1,4 +1,4 @@
-// src/views/RepartidorView.js
+// RepartidorView.js actualizado para mostrar solo los pedidos asignados al repartidor autenticado
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase/firebase";
 import {
@@ -25,15 +25,19 @@ function RepartidorView() {
   const [pedidos, setPedidos] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [gastoExtra, setGastoExtra] = useState(0);
+  const [campoAsignacion, setCampoAsignacion] = useState("");
 
-  const cargarPedidos = async (fecha) => {
+  const cargarPedidos = async (fecha, campo) => {
     const inicio = Timestamp.fromDate(startOfDay(fecha));
     const fin = Timestamp.fromDate(endOfDay(fecha));
+
     const q = query(
       collection(db, "pedidos"),
       where("fecha", ">=", inicio),
-      where("fecha", "<=", fin)
+      where("fecha", "<=", fin),
+      where(campo, "==", true)
     );
+
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setPedidos(data);
@@ -45,8 +49,18 @@ function RepartidorView() {
 
   useEffect(() => {
     const autorizado = localStorage.getItem("repartidorAutenticado");
-    if (!autorizado) navigate("/login-repartidor");
-    else cargarPedidos(fechaSeleccionada);
+    const email = localStorage.getItem("emailRepartidor");
+
+    if (!autorizado || !email) return navigate("/login-repartidor");
+
+    let campo = "";
+    if (email === "repartidor1@gmail.com") campo = "repartidor1";
+    else if (email === "repartidor2@gmail.com") campo = "repartidor2";
+    else if (email === "repartidor3@gmail.com") campo = "repartidor3";
+    else if (email === "repartidor4@gmail.com") campo = "repartidor4";
+
+    setCampoAsignacion(campo);
+    cargarPedidos(fechaSeleccionada, campo);
   }, [fechaSeleccionada]);
 
   const marcarEntregado = async (id, entregado) => {
@@ -213,6 +227,7 @@ function RepartidorView() {
 
       <button className="btn btn-outline-danger mt-3 ms-2" onClick={() => {
         localStorage.removeItem("repartidorAutenticado");
+        localStorage.removeItem("emailRepartidor");
         navigate("/login-repartidor");
       }}>
         Cerrar sesión

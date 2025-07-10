@@ -111,6 +111,9 @@ function AdminPedidos() {
             <button className="btn btn-outline-danger" onClick={cerrarSesion}>
               Cerrar sesión
             </button>
+            <button className="btn btn-outline-info" onClick={() => navigate("/admin/dividir-pedidos")}>
+  🗂 División de Pedidos
+</button>
             <button className="btn btn-outline-secondary" onClick={() => navigate("/")}>
               ⬅ Volver a zona de pedidos
             </button>

@@ -7,6 +7,7 @@ import LoginVendedor from "./views/LoginVendedor";
 import Home from "./views/Home";
 import RepartidorView from "./views/RepartidorView";
 import LoginRepartidor from "./views/LoginRepartidor";
+import AdminDivisionPedidos from "./admin/AdminDivisionPedidos";
 
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
         
 <Route path="/login-repartidor" element={<LoginRepartidor />} />
 <Route path="/repartidor" element={<RepartidorView />} />
+<Route path="/admin/dividir-pedidos" element={<AdminDivisionPedidos />} />
+
       </Routes>
     </Router>
   );

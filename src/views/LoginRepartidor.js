@@ -5,7 +5,13 @@ import { auth, googleProvider } from "../firebase/firebase";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import Swal from "sweetalert2";
 
-const repartidoresPermitidos = ["federudiero@gmail.com", "repartidor2@gmail.com"];
+// ✅ Lista completa de repartidores autorizados
+const repartidoresPermitidos = [
+  "repartidor1@gmail.com",
+  "repartidor2@gmail.com",
+  "repartidor3@gmail.com",
+  "repartidor4@gmail.com",
+];
 
 function LoginRepartidor() {
   const [email, setEmail] = useState("");
@@ -17,6 +23,7 @@ function LoginRepartidor() {
       const user = await signInWithEmailAndPassword(auth, email, password);
       if (repartidoresPermitidos.includes(user.user.email)) {
         localStorage.setItem("repartidorAutenticado", "true");
+        localStorage.setItem("emailRepartidor", user.user.email); // ✅ necesario
         navigate("/repartidor");
       } else {
         Swal.fire("❌ No tenés permisos de repartidor");
@@ -33,6 +40,7 @@ function LoginRepartidor() {
 
       if (repartidoresPermitidos.includes(emailGoogle)) {
         localStorage.setItem("repartidorAutenticado", "true");
+        localStorage.setItem("emailRepartidor", emailGoogle); // ✅ necesario
         navigate("/repartidor");
       } else {
         Swal.fire("❌ No tenés permisos de repartidor con esta cuenta de Google");
