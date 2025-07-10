@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PedidoForm from "../components/PedidoForm";
 import { db, auth } from "../firebase/firebase";
+import PedidoTabla from "../components/PedidoTabla";
 import {
   collection,
   addDoc,
@@ -52,11 +53,12 @@ function VendedorView() {
     setCantidadPedidos(querySnapshot.docs.length);
   };
 
-  useEffect(() => {
-    if (usuario) {
-      cargarCantidadPedidos(fechaSeleccionada);
-    }
-  }, [fechaSeleccionada, usuario]);
+ useEffect(() => {
+  if (usuario) {
+    cargarCantidadPedidos(fechaSeleccionada);
+    cargarPedidos(fechaSeleccionada);
+  }
+}, [fechaSeleccionada, usuario]);
 
   const agregarPedido = async (pedido) => {
     const fechaAhora = new Date();
@@ -81,6 +83,26 @@ function VendedorView() {
       return nuevoModo;
     });
   };
+
+const [pedidos, setPedidos] = useState([]);
+
+const cargarPedidos = async (fecha) => {
+  const inicio = Timestamp.fromDate(startOfDay(fecha));
+  const fin = Timestamp.fromDate(endOfDay(fecha));
+  const pedidosRef = collection(db, "pedidos");
+
+  const q = query(
+    pedidosRef,
+    where("fecha", ">=", inicio),
+    where("fecha", "<=", fin),
+    where("vendedorEmail", "==", usuario?.email || "")
+  );
+
+  const querySnapshot = await getDocs(q);
+  setPedidos(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
+
+
 
   return (
     <div className={darkMode ? "bg-dark text-light min-vh-100" : "bg-light text-dark min-vh-100"}>
@@ -112,6 +134,11 @@ function VendedorView() {
 
         <PedidoForm onAgregar={agregarPedido} />
       </div>
+
+
+      <hr className="my-4" />
+<h4 className="mb-3">📋 Tus pedidos del día</h4>
+<PedidoTabla pedidos={pedidos} mostrarVendedor={false} />
     </div>
   );
 }
