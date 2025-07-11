@@ -64,37 +64,46 @@ function AdminDivisionPedidos() {
       {loading ? (
         <p>Cargando pedidos...</p>
       ) : (
-        <table className="table table-bordered">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Dirección</th>
-              <th>Pedido</th>
-              <th>R1</th>
-              <th>R2</th>
-              <th>R3</th>
-              <th>R4</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pedidos.map((p) => (
-              <tr key={p.id}>
-                <td>{p.nombre}</td>
-                <td>{p.direccion}</td>
-                <td>{p.pedido}</td>
-                {[1, 2, 3, 4].map((n) => (
-                  <td key={n}>
-                    <input
-                      type="checkbox"
-                      checked={p[`repartidor${n}`] || false}
-                      onChange={(e) => handleAsignar(p.id, `repartidor${n}`, e.target.checked)}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <table className="table table-bordered table-hover align-middle">
+  <thead className="table-dark">
+    <tr>
+      <th>👤 Cliente</th>
+      <th>📌 Dirección</th>
+      <th>📝 Pedido</th>
+      <th className="text-center">R1</th>
+      <th className="text-center">R2</th>
+      <th className="text-center">R3</th>
+      <th className="text-center">R4</th>
+    </tr>
+  </thead>
+  <tbody>
+    {pedidos.map((p) => (
+      <tr
+        key={p.id}
+        className={
+          p.repartidor1 || p.repartidor2 || p.repartidor3 || p.repartidor4
+            ? "table-success"
+            : ""
+        }
+      >
+        <td><strong>{p.nombre}</strong></td>
+        <td>{p.direccion}</td>
+        <td style={{ whiteSpace: 'pre-wrap' }}>
+          {p.pedido?.replace(/\| TOTAL: \$([\d\.]+)/, '| TOTAL: $' + '<strong>$1</strong>')}
+        </td>
+        {[1, 2, 3, 4].map((n) => (
+          <td key={n} className="text-center">
+            <input
+              type="checkbox"
+              checked={p[`repartidor${n}`] || false}
+              onChange={(e) => handleAsignar(p.id, `repartidor${n}`, e.target.checked)}
+            />
+          </td>
+        ))}
+      </tr>
+    ))}
+  </tbody>
+</table>
       )}
 
       <button className="btn btn-secondary mt-3" onClick={() => navigate("/admin/pedidos")}>⬅ Volver a pedidos</button>

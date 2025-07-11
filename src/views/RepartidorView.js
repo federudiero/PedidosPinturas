@@ -1,4 +1,4 @@
-// RepartidorView.js actualizado para mostrar solo los pedidos asignados al repartidor autenticado
+// RepartidorView.js actualizado y mejorado visualmente
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase/firebase";
 import {
@@ -152,109 +152,86 @@ function RepartidorView() {
 
   return (
     <div className="container py-4">
-  <h2>🚚 Pedidos para Reparto</h2>
+      <h2>🚚 Pedidos para Reparto</h2>
 
-  <div className="mb-3">
-    <DatePicker
-      selected={fechaSeleccionada}
-      onChange={(date) => setFechaSeleccionada(date)}
-      className="form-control"
-    />
-  </div>
-
-  <div className="row">
-    {pedidos.map((p, i) => (
-      <div className="col-md-6 col-lg-4 mb-4" key={p.id}>
-        <div className="card shadow-sm h-100">
-          <div className="card-body">
-            <h5 className="card-title">📦 Pedido #{i + 1}</h5>
-            <p><strong>👤 Cliente:</strong> {p.nombre}</p>
-            <p>
-              <strong>📌 Dirección:</strong> {p.direccion}{" "}
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <FaMapMarkerAlt className="text-primary ms-1" />
-              </a>
-            </p>
-            <p><strong>📱 Teléfono:</strong> {p.telefono}</p>
-            <p><strong>📝 Pedido:</strong><br /> {p.pedido}</p>
-
-            <div className="form-check form-switch my-2">
-              <input
-                type="checkbox"
-                className="form-check-input"
-                checked={!!p.entregado}
-                onChange={(e) => marcarEntregado(p.id, e.target.checked)}
-              />
-              <label className="form-check-label ms-2">✅ Entregado</label>
-            </div>
-
-            <label><strong>💰 Método de pago</strong></label>
-            <select
-              className="form-select mb-2"
-              value={p.metodoPago || ""}
-              onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}
-            >
-              <option value="">Seleccionar</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="tarjeta">Tarjeta</option>
-            </select>
-
-            {(p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") && (
-              <input
-                className="form-control"
-                placeholder="N° comprobante"
-                value={p.comprobante || ""}
-                onChange={(e) => actualizarComprobante(p.id, e.target.value)}
-              />
-            )}
-          </div>
-        </div>
+      <div className="mb-3">
+        <DatePicker
+          selected={fechaSeleccionada}
+          onChange={(date) => setFechaSeleccionada(date)}
+          className="form-control"
+        />
       </div>
-    ))}
-  </div>
 
-  <div className="mt-4">
-    <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
-    <input
-      type="number"
-      className="form-control w-auto"
-      value={gastoExtra}
-      onChange={(e) => actualizarGastoExtra(e.target.value)}
-    />
-  </div>
+      <div className="row">
+        {pedidos.map((p, i) => (
+          <div className="col-md-6 col-lg-4 mb-4" key={p.id}>
+            <div className="card shadow-sm h-100">
+              <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>📦 Pedido #{i + 1}</span>
+                {p.entregado && <span className="badge bg-success">Entregado</span>}
+              </div>
+              <div className="card-body">
+                <p className="mb-2"><strong>👤 Cliente:</strong> {p.nombre}</p>
+                <hr className="my-2" />
+                <p className="mb-2">
+                  <strong>📌 Dirección:</strong> {p.direccion}{" "}
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`} target="_blank" rel="noopener noreferrer">
+                    <FaMapMarkerAlt className="text-danger ms-1" />
+                  </a>
+                </p>
+                <p className="mb-2"><strong>📱 Teléfono:</strong> {p.telefono}</p>
+                <hr className="my-2" />
+                <p className="mb-2"><strong>📝 Pedido:</strong><br /><span className="text-dark">{p.pedido}</span></p>
 
-  <div className="mt-3">
-    <strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}
-  </div>
+                <div className="form-check form-switch my-2">
+                  <input type="checkbox" className="form-check-input" id={`entregado-${p.id}`} checked={!!p.entregado} onChange={(e) => marcarEntregado(p.id, e.target.checked)} />
+                  <label className="form-check-label ms-2" htmlFor={`entregado-${p.id}`}>✅ Marcar como entregado</label>
+                </div>
 
-  <div className="mt-3">
-    <strong>💵 Total efectivo:</strong> ${totales.totalEfectivo.toLocaleString()} <br />
-    <strong>🏦 Total transferencia (+10%):</strong> ${totales.totalTransferencia.toLocaleString()} <br />
-    <strong>💳 Total tarjeta (+10%):</strong> ${totales.totalTarjeta.toLocaleString()} <br />
-    <strong>⛽ Gasto extra:</strong> -${gastoExtra.toLocaleString()} <br />
-    <strong>💰 Total recaudado neto:</strong> ${totales.totalFinal.toLocaleString()}
-  </div>
+                <label><strong>💰 Método de pago</strong></label>
+                <select className="form-select shadow-sm rounded-3 mb-2" value={p.metodoPago || ""} onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}>
+                  <option value="">Seleccionar</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                </select>
 
-  <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
-    📥 Exportar entregados a Excel
-  </button>
+                {(p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") && (
+                  <input className="form-control shadow-sm rounded-3" placeholder="N° comprobante" value={p.comprobante || ""} onChange={(e) => actualizarComprobante(p.id, e.target.value)} />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-  <button
-    className="btn btn-outline-danger mt-3 ms-2"
-    onClick={() => {
-      localStorage.removeItem("repartidorAutenticado");
-      localStorage.removeItem("emailRepartidor");
-      navigate("/login-repartidor");
-    }}
-  >
-    Cerrar sesión
-  </button>
-</div>
+      <div className="mt-4">
+        <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
+        <input type="number" className="form-control w-auto" value={gastoExtra} onChange={(e) => actualizarGastoExtra(e.target.value)} />
+      </div>
+
+      <div className="alert alert-secondary mt-4">
+        <p className="mb-1"><strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}</p>
+        <p className="mb-1"><strong>💵 Total efectivo:</strong> ${totales.totalEfectivo.toLocaleString()}</p>
+        <p className="mb-1"><strong>🏦 Total transferencia (+10%):</strong> ${totales.totalTransferencia.toLocaleString()}</p>
+        <p className="mb-1"><strong>💳 Total tarjeta (+10%):</strong> ${totales.totalTarjeta.toLocaleString()}</p>
+        <p className="mb-1"><strong>⛽ Gasto extra:</strong> -${gastoExtra.toLocaleString()}</p>
+        <hr />
+        <h5><strong>💰 Total recaudado neto:</strong> ${totales.totalFinal.toLocaleString()}</h5>
+      </div>
+
+      <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
+        📥 Exportar entregados a Excel
+      </button>
+
+      <button className="btn btn-outline-danger mt-3 ms-2" onClick={() => {
+        localStorage.removeItem("repartidorAutenticado");
+        localStorage.removeItem("emailRepartidor");
+        navigate("/login-repartidor");
+      }}>
+        Cerrar sesión
+      </button>
+    </div>
   );
 }
 
