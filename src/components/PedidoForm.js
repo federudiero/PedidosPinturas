@@ -1,8 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState ,useEffect} from "react";
 import { useForm } from "react-hook-form";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import Swal from "sweetalert2";
 import { GoogleMap, Marker } from "@react-google-maps/api";
+import './PedidoForm.css';
 
 
 const productosCatalogo = [
@@ -93,11 +94,10 @@ const productosCatalogo = [
 
 ];
 
-const PedidoForm = ({ onAgregar }) => {
-  const [coordenadas, setCoordenadas] = useState(null);
-  const { handleSubmit, reset } = useForm();
+const PedidoForm = ({ onAgregar, onActualizar, pedidoAEditar }) => {
   const autoCompleteRef = useRef(null);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
+  const [coordenadas, setCoordenadas] = useState(null);
 
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -113,41 +113,60 @@ const PedidoForm = ({ onAgregar }) => {
     libraries: ["places"]
   });
 
+  useEffect(() => {
+    if (pedidoAEditar) {
+      setNombre(pedidoAEditar.nombre || "");
+      setTelefono(pedidoAEditar.telefono || "");
+      setDireccion(pedidoAEditar.direccion || "");
+      setEntreCalles(pedidoAEditar.entreCalles || "");
+      setPartido(pedidoAEditar.partido || "");
+
+      const nuevosProductos = [];
+      productosCatalogo.forEach((p) => {
+        const regex = new RegExp(`${p.nombre} x(\\d+)`);
+        const match = pedidoAEditar.pedido.match(regex);
+        if (match) {
+          nuevosProductos.push({ ...p, cantidad: parseInt(match[1]) });
+        }
+      });
+      setProductosSeleccionados(nuevosProductos);
+    }
+  }, [pedidoAEditar]);
+
   const handlePlaceChanged = () => {
-  const place = autoCompleteRef.current.getPlace();
-  const direccionCompleta = place.formatted_address || "";
-  const plusCode = place.plus_code?.global_code || "";
-  const direccionFinal = plusCode
-    ? `${plusCode} - ${direccionCompleta}`
-    : direccionCompleta;
+    const place = autoCompleteRef.current.getPlace();
+    const direccionCompleta = place.formatted_address || "";
+    const plusCode = place.plus_code?.global_code || "";
+    const direccionFinal = plusCode
+      ? `${plusCode} - ${direccionCompleta}`
+      : direccionCompleta;
+    setDireccion(direccionFinal);
 
-  setDireccion(direccionFinal);
-
-  // Extraer coordenadas
-  const location = place.geometry?.location;
-  if (location) {
-    setCoordenadas({
-      lat: location.lat(),
-      lng: location.lng()
-    });
-  }
-};
-  const toggleProducto = (producto) => {
-    const yaSeleccionado = productosSeleccionados.find(p => p.nombre === producto.nombre);
-    if (yaSeleccionado) {
-      setProductosSeleccionados(prev => prev.filter(p => p.nombre !== producto.nombre));
-    } else {
-      setProductosSeleccionados(prev => [...prev, producto]);
+    const location = place.geometry?.location;
+    if (location) {
+      setCoordenadas({
+        lat: location.lat(),
+        lng: location.lng()
+      });
     }
   };
 
-const calcularResumenPedido = () => {
-  const resumen = productosSeleccionados
-    .map(p => `${p.nombre} x${p.cantidad} ($${p.precio * p.cantidad})`)
-    .join(" - ");
-  const total = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
-  return { resumen, total };
-};
+  const calcularResumenPedido = () => {
+    const resumen = productosSeleccionados
+      .map(p => `${p.nombre} x${p.cantidad} ($${p.precio * p.cantidad})`)
+      .join(" - ");
+    const total = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+    return { resumen, total };
+  };
+
+  const resetFormulario = () => {
+    setNombre("");
+    setTelefono("");
+    setPartido("");
+    setDireccion("");
+    setEntreCalles("");
+    setProductosSeleccionados([]);
+  };
 
   const onSubmit = () => {
     if (errorNombre || errorTelefono) {
@@ -163,97 +182,54 @@ const calcularResumenPedido = () => {
       partido,
       direccion,
       entreCalles,
-      pedido: pedidoFinal
+      pedido: pedidoFinal,
     };
 
-    onAgregar(pedidoConProductos);
-    setProductosSeleccionados([]);
-    reset();
-    setNombre("");
-    setTelefono("");
-    setPartido("");
-    setDireccion("");
-    setEntreCalles("");
+    pedidoAEditar ? onActualizar({ ...pedidoAEditar, ...pedidoConProductos }) : onAgregar(pedidoConProductos);
+
+    resetFormulario();
   };
 
   return isLoaded ? (
-    <form onSubmit={handleSubmit(onSubmit)} className="mb-5">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="mb-5">
       <div className="row g-4">
         <div className="col-md-6">
           <div className="card shadow-sm p-4">
             <h5 className="mb-3">🧑 Datos del cliente</h5>
 
             <label>👤 Nombre</label>
-            <input
-              className="form-control mb-1"
-              value={nombre}
-              onChange={(e) => {
-                const val = e.target.value;
-                setNombre(val);
-                if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val)) {
-                  setErrorNombre("❌ Solo letras y espacios.");
-                } else {
-                  setErrorNombre("");
-                }
-              }}
-            />
+            <input className="form-control mb-1" value={nombre} onChange={(e) => {
+              const val = e.target.value;
+              setNombre(val);
+              setErrorNombre(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val) ? "" : "❌ Solo letras y espacios.");
+            }} />
             {errorNombre && <small className="text-danger">{errorNombre}</small>}
 
             <label className="mt-3">🏠 Calle y Altura</label>
-            <Autocomplete
-              onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)}
-              onPlaceChanged={handlePlaceChanged}
-            >
-              <input
-                className="form-control mb-3"
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Buscar dirección"
-              />
+            <Autocomplete onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)} onPlaceChanged={handlePlaceChanged}>
+              <input className="form-control mb-3" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Buscar dirección" />
             </Autocomplete>
-            {coordenadas && (
-  <div className="mb-3" style={{ height: "200px" }}>
-    <GoogleMap
-      mapContainerStyle={{ width: "100%", height: "100%" }}
-      center={coordenadas}
-      zoom={16}
-    >
-      <Marker position={coordenadas} />
-    </GoogleMap>
-  </div>
-)}
 
+            {coordenadas && (
+              <div className="mb-3" style={{ height: "200px" }}>
+                <GoogleMap mapContainerStyle={{ width: "100%", height: "100%" }} center={coordenadas} zoom={16}>
+                  <Marker position={coordenadas} />
+                </GoogleMap>
+              </div>
+            )}
 
             <label>🗒️ Observación (Entre calles)</label>
-            <input
-              className="form-control mb-3"
-              value={entreCalles}
-              onChange={(e) => setEntreCalles(e.target.value)}
-              placeholder="Ej: entre calles"
-            />
+            <input className="form-control mb-3" value={entreCalles} onChange={(e) => setEntreCalles(e.target.value)} />
 
             <label>🌆 Ciudad o partido</label>
-            <input
-              className="form-control mb-3"
-              value={partido}
-              onChange={(e) => setPartido(e.target.value)}
-              placeholder="Ciudad o localidad"
-            />
+            <input className="form-control mb-3" value={partido} onChange={(e) => setPartido(e.target.value)} />
 
             <label className="mt-3">📞 Teléfono</label>
-            <input
-              className="form-control mb-1"
-              value={telefono}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "");
-                setTelefono(val);
-                if (!/^[0-9]{6,15}$/.test(val)) {
-                  setErrorTelefono("❌ Solo números (6 a 15 dígitos).");
-                } else {
-                  setErrorTelefono("");
-                }
-              }}
-            />
+            <input className="form-control mb-1" value={telefono} onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "");
+              setTelefono(val);
+              setErrorTelefono(/^[0-9]{6,15}$/.test(val) ? "" : "❌ Solo números (6 a 15 dígitos).");
+            }} />
             {errorTelefono && <small className="text-danger">{errorTelefono}</small>}
           </div>
         </div>
@@ -262,39 +238,31 @@ const calcularResumenPedido = () => {
           <div className="card shadow-sm p-4">
             <h5 className="mb-3">🛒 Productos</h5>
 
-            <div
-              className="mb-3 border rounded p-2"
-              style={{ maxHeight: "300px", overflowY: "auto" }}
-            >
-             {productosCatalogo.map((prod, idx) => {
-  const cantidad = productosSeleccionados.find(p => p.nombre === prod.nombre)?.cantidad || 0;
-
-  return (
-    <div key={idx} className="d-flex align-items-center justify-content-between mb-2">
-      <div>
-        <strong>{prod.nombre}</strong> - ${prod.precio.toLocaleString()}
-      </div>
-      <input
-        type="number"
-        min="0"
-        value={cantidad}
-        onChange={(e) => {
-          const cantidad = parseInt(e.target.value, 10);
-          setProductosSeleccionados((prev) => {
-            const sinEste = prev.filter(p => p.nombre !== prod.nombre);
-            if (cantidad > 0) {
-              return [...sinEste, { ...prod, cantidad }];
-            } else {
-              return sinEste;
-            }
-          });
-        }}
-        className="form-control ms-2"
-        style={{ width: "70px" }}
-      />
-    </div>
-  );
-})}
+            <div className="mb-3 border rounded p-2" style={{ maxHeight: "300px", overflowY: "auto", fontSize: "14px" }}>
+              {productosCatalogo.map((prod, idx) => {
+                const cantidad = productosSeleccionados.find(p => p.nombre === prod.nombre)?.cantidad || 0;
+                return (
+                  <div key={idx} className="d-flex justify-content-between align-items-center mb-1">
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                     <strong>{prod.nombre}</strong> - ${prod.precio.toLocaleString()}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={cantidad}
+                      onChange={(e) => {
+                        const cant = parseInt(e.target.value, 10);
+                        setProductosSeleccionados((prev) => {
+                          const sinEste = prev.filter(p => p.nombre !== prod.nombre);
+                          return cant > 0 ? [...sinEste, { ...prod, cantidad: cant }] : sinEste;
+                        });
+                      }}
+                      className="form-control ms-2"
+                      style={{ width: "60px", fontSize: "13px", padding: "2px 6px" }}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             <label>📝 Pedido generado</label>
@@ -302,24 +270,20 @@ const calcularResumenPedido = () => {
               className="form-control mb-3"
               value={
                 calcularResumenPedido().resumen +
-                (productosSeleccionados.length
-                  ? ` | TOTAL: $${calcularResumenPedido().total}`
-                  : "")
+                (productosSeleccionados.length ? ` | TOTAL: $${calcularResumenPedido().total}` : "")
               }
               readOnly
               rows={4}
             />
 
-            <button type="submit" className="btn btn-success w-100 fw-bold">
-              ✅ Agregar Pedido
+            <button type="submit" className={`btn ${pedidoAEditar ? "btn-warning" : "btn-success"} w-100 fw-bold`}>
+              {pedidoAEditar ? "✏️ Actualizar Pedido" : "✅ Agregar Pedido"}
             </button>
           </div>
         </div>
       </div>
     </form>
-  ) : (
-    <p>Cargando Google Maps...</p>
-  );
+  ) : <p>Cargando Google Maps...</p>;
 };
 
 export default PedidoForm;

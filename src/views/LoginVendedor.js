@@ -7,13 +7,14 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import "./LoginVendedor.css"; // ← nuevo archivo CSS
 
 function LoginVendedor() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const vendedoresPermitidos = ["federudiero@gmail.com", "vendedor2@gmail.com"];
+  const vendedoresPermitidos = ["federudiero@gmail.com", "andreitarudiero@gmail.com", "vendedor2@gmail.com"];
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -88,42 +89,44 @@ function LoginVendedor() {
   };
 
   return (
-    <div className="container py-5">
-      <h2>👤 Ingreso / Registro de Vendedor</h2>
+    <div className="login-container d-flex align-items-center justify-content-center">
+      <div className="card login-card p-4 shadow-lg">
+        <h3 className="text-center mb-4">🛒 Acceso de Vendedor</h3>
 
-      <input
-        type="email"
-        className="form-control my-2"
-        placeholder="Correo electrónico"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <input
+          type="email"
+          className="form-control mb-3"
+          placeholder="Correo electrónico"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        className="form-control my-2"
-        placeholder="Contraseña"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="password"
+          className="form-control mb-3"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      <div className="d-flex gap-2 mt-3">
-        <button className="btn btn-primary" onClick={handleLogin}>
-          Ingresar
+        <div className="d-grid gap-2 mb-3">
+          <button className="btn btn-primary" onClick={handleLogin}>
+            🔐 Ingresar
+          </button>
+          <button className="btn btn-secondary" onClick={handleRegister}>
+            ✍️ Registrarse
+          </button>
+        </div>
+
+        <hr />
+        <button className="btn btn-danger w-100 mb-3" onClick={handleGoogleLogin}>
+          🚀 Iniciar con Google
         </button>
-        <button className="btn btn-secondary" onClick={handleRegister}>
-          Registrarse
+
+        <button className="btn btn-outline-secondary w-100" onClick={() => navigate("/")}>
+          ⬅ Volver al inicio
         </button>
       </div>
-
-      <hr />
-      <button className="btn btn-danger mt-2" onClick={handleGoogleLogin}>
-        Iniciar con Google 🚀
-      </button>
-
-      <button className="btn btn-outline-secondary mt-3" onClick={() => navigate("/")}>
-        ⬅ Volver al inicio
-      </button>
     </div>
   );
 }

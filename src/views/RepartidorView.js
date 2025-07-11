@@ -152,87 +152,109 @@ function RepartidorView() {
 
   return (
     <div className="container py-4">
-      <h2>🚚 Pedidos para Reparto</h2>
+  <h2>🚚 Pedidos para Reparto</h2>
 
-      <div className="mb-3">
-        <DatePicker
-          selected={fechaSeleccionada}
-          onChange={(date) => setFechaSeleccionada(date)}
-          className="form-control"
-        />
+  <div className="mb-3">
+    <DatePicker
+      selected={fechaSeleccionada}
+      onChange={(date) => setFechaSeleccionada(date)}
+      className="form-control"
+    />
+  </div>
+
+  <div className="row">
+    {pedidos.map((p, i) => (
+      <div className="col-md-6 col-lg-4 mb-4" key={p.id}>
+        <div className="card shadow-sm h-100">
+          <div className="card-body">
+            <h5 className="card-title">📦 Pedido #{i + 1}</h5>
+            <p><strong>👤 Cliente:</strong> {p.nombre}</p>
+            <p>
+              <strong>📌 Dirección:</strong> {p.direccion}{" "}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaMapMarkerAlt className="text-primary ms-1" />
+              </a>
+            </p>
+            <p><strong>📱 Teléfono:</strong> {p.telefono}</p>
+            <p><strong>📝 Pedido:</strong><br /> {p.pedido}</p>
+
+            <div className="form-check form-switch my-2">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                checked={!!p.entregado}
+                onChange={(e) => marcarEntregado(p.id, e.target.checked)}
+              />
+              <label className="form-check-label ms-2">✅ Entregado</label>
+            </div>
+
+            <label><strong>💰 Método de pago</strong></label>
+            <select
+              className="form-select mb-2"
+              value={p.metodoPago || ""}
+              onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}
+            >
+              <option value="">Seleccionar</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="tarjeta">Tarjeta</option>
+            </select>
+
+            {(p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") && (
+              <input
+                className="form-control"
+                placeholder="N° comprobante"
+                value={p.comprobante || ""}
+                onChange={(e) => actualizarComprobante(p.id, e.target.value)}
+              />
+            )}
+          </div>
+        </div>
       </div>
+    ))}
+  </div>
 
-      <table className="table table-striped">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Dirección</th>
-            <th>Teléfono</th>
-            <th>Pedido</th>
-            <th>Entregado</th>
-            <th>Pago</th>
-            <th>Comprobante</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pedidos.map(p => (
-            <tr key={p.id}>
-              <td>{p.nombre}</td>
-              <td>
-                {p.direccion} <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`} target="_blank" rel="noopener noreferrer"><FaMapMarkerAlt className="text-primary ms-2" /></a>
-              </td>
-              <td>{p.telefono}</td>
-              <td>{p.pedido}</td>
-              <td>
-                <input type="checkbox" checked={!!p.entregado} onChange={(e) => marcarEntregado(p.id, e.target.checked)} />
-              </td>
-              <td>
-                <select className="form-select" value={p.metodoPago || ""} onChange={(e) => actualizarMetodoPago(p.id, e.target.value)}>
-                  <option value="">Seleccionar</option>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
-                </select>
-              </td>
-              <td>
-                {(p.metodoPago === "transferencia" || p.metodoPago === "tarjeta") && (
-                  <input className="form-control" placeholder="N° comprobante" value={p.comprobante || ""} onChange={(e) => actualizarComprobante(p.id, e.target.value)} />
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+  <div className="mt-4">
+    <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
+    <input
+      type="number"
+      className="form-control w-auto"
+      value={gastoExtra}
+      onChange={(e) => actualizarGastoExtra(e.target.value)}
+    />
+  </div>
 
-      <div className="mt-3">
-        <label><strong>⛽ Gasto extra (combustible, etc):</strong></label>
-        <input type="number" className="form-control w-auto" value={gastoExtra} onChange={(e) => actualizarGastoExtra(e.target.value)} />
-      </div>
+  <div className="mt-3">
+    <strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}
+  </div>
 
-      <div className="mt-3">
-        <strong>✅ Entregados:</strong> {pedidos.filter(p => p.entregado).length} / {pedidos.length}
-      </div>
+  <div className="mt-3">
+    <strong>💵 Total efectivo:</strong> ${totales.totalEfectivo.toLocaleString()} <br />
+    <strong>🏦 Total transferencia (+10%):</strong> ${totales.totalTransferencia.toLocaleString()} <br />
+    <strong>💳 Total tarjeta (+10%):</strong> ${totales.totalTarjeta.toLocaleString()} <br />
+    <strong>⛽ Gasto extra:</strong> -${gastoExtra.toLocaleString()} <br />
+    <strong>💰 Total recaudado neto:</strong> ${totales.totalFinal.toLocaleString()}
+  </div>
 
-      <div className="mt-3">
-        <strong>💵 Total efectivo:</strong> ${totales.totalEfectivo.toLocaleString()} <br />
-        <strong>🏦 Total transferencia (+10%):</strong> ${totales.totalTransferencia.toLocaleString()} <br />
-        <strong>💳 Total tarjeta (+10%):</strong> ${totales.totalTarjeta.toLocaleString()} <br />
-        <strong>⛽ Gasto extra:</strong> -${gastoExtra.toLocaleString()} <br />
-        <strong>💰 Total recaudado neto:</strong> ${totales.totalFinal.toLocaleString()}
-      </div>
+  <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
+    📥 Exportar entregados a Excel
+  </button>
 
-      <button className="btn btn-success mt-3" onClick={exportarEntregadosAExcel}>
-        📥 Exportar entregados a Excel
-      </button>
-
-      <button className="btn btn-outline-danger mt-3 ms-2" onClick={() => {
-        localStorage.removeItem("repartidorAutenticado");
-        localStorage.removeItem("emailRepartidor");
-        navigate("/login-repartidor");
-      }}>
-        Cerrar sesión
-      </button>
-    </div>
+  <button
+    className="btn btn-outline-danger mt-3 ms-2"
+    onClick={() => {
+      localStorage.removeItem("repartidorAutenticado");
+      localStorage.removeItem("emailRepartidor");
+      navigate("/login-repartidor");
+    }}
+  >
+    Cerrar sesión
+  </button>
+</div>
   );
 }
 

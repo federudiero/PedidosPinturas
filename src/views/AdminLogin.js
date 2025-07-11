@@ -1,7 +1,8 @@
+// src/views/AdminLogin.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../firebase/firebase"; // Asegurate que esté bien
+import { auth, googleProvider } from "../firebase/firebase";
 import Swal from "sweetalert2";
 
 function AdminLogin() {
@@ -9,7 +10,11 @@ function AdminLogin() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const adminsPermitidos = ["federudiero@gmail.com", "admin2@mail.com", "admin3@mail.com"];
+  const adminsPermitidos = [
+    "federudiero@gmail.com",
+    "admin2@mail.com",
+    "admin3@mail.com",
+  ];
 
   const showAlert = (mensaje, icon = "error") => {
     Swal.fire({
@@ -22,7 +27,11 @@ function AdminLogin() {
 
   const handleLogin = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       if (adminsPermitidos.includes(userCredential.user.email)) {
         localStorage.setItem("adminAutenticado", "true");
         navigate("/admin/pedidos");
@@ -43,7 +52,9 @@ function AdminLogin() {
         localStorage.setItem("adminAutenticado", "true");
         navigate("/admin/pedidos");
       } else {
-        showAlert("❌ No tenés permisos de administrador con esta cuenta de Google");
+        showAlert(
+          "❌ No tenés permisos de administrador con esta cuenta de Google"
+        );
       }
     } catch (error) {
       showAlert("❌ Error con Google: " + error.message);
@@ -51,40 +62,45 @@ function AdminLogin() {
   };
 
   return (
-    <div className="container py-5">
-      <h2 className="mb-4">🔐 Acceso Administrador</h2>
+    <div className="container d-flex justify-content-center align-items-center py-5">
+      <div className="card p-4 shadow" style={{ maxWidth: 450, width: "100%" }}>
+        <h2 className="mb-4 text-center text-primary">🔐 Acceso Administrador</h2>
 
-      <input
-        type="email"
-        className="form-control mb-3"
-        placeholder="Correo del administrador"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <input
+          type="email"
+          className="form-control mb-3"
+          placeholder="Correo del administrador"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        className="form-control mb-3"
-        placeholder="Contraseña"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleLogin();
-        }}
-      />
+        <input
+          type="password"
+          className="form-control mb-3"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleLogin();
+          }}
+        />
 
-      <button type="button" className="btn btn-primary me-2" onClick={handleLogin}>
-        Ingresar
-      </button>
+        <div className="d-grid gap-2 mb-3">
+          <button className="btn btn-primary" onClick={handleLogin}>
+            Ingresar
+          </button>
+          <button className="btn btn-danger" onClick={handleGoogleLogin}>
+            Iniciar como Admin con Google 🚀
+          </button>
+        </div>
 
-      <hr />
-      <button className="btn btn-danger" onClick={handleGoogleLogin}>
-        Iniciar como Admin con Google 🚀
-      </button>
-
-      <button className="btn btn-outline-secondary mt-3" onClick={() => navigate("/")}>
-        ⬅ Volver al inicio
-      </button>
+        <button
+          className="btn btn-outline-secondary w-100"
+          onClick={() => navigate("/")}
+        >
+          ⬅ Volver al inicio
+        </button>
+      </div>
     </div>
   );
 }

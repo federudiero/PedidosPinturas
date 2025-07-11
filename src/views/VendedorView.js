@@ -9,6 +9,9 @@ import {
   where,
   getDocs,
   Timestamp,
+  doc,
+  updateDoc,
+  deleteDoc
 } from "firebase/firestore";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -25,6 +28,8 @@ function VendedorView() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [cantidadPedidos, setCantidadPedidos] = useState(0);
   const navigate = useNavigate();
+  const [pedidos, setPedidos] = useState([]);
+  const [pedidoAEditar, setPedidoAEditar] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -36,6 +41,13 @@ function VendedorView() {
     });
     return () => unsubscribe();
   }, [navigate]);
+
+  useEffect(() => {
+    if (usuario) {
+      cargarCantidadPedidos(fechaSeleccionada);
+      cargarPedidos(fechaSeleccionada);
+    }
+  }, [fechaSeleccionada, usuario]);
 
   const cargarCantidadPedidos = async (fecha) => {
     const inicio = Timestamp.fromDate(startOfDay(fecha));
@@ -53,12 +65,21 @@ function VendedorView() {
     setCantidadPedidos(querySnapshot.docs.length);
   };
 
- useEffect(() => {
-  if (usuario) {
-    cargarCantidadPedidos(fechaSeleccionada);
-    cargarPedidos(fechaSeleccionada);
-  }
-}, [fechaSeleccionada, usuario]);
+  const cargarPedidos = async (fecha) => {
+    const inicio = Timestamp.fromDate(startOfDay(fecha));
+    const fin = Timestamp.fromDate(endOfDay(fecha));
+    const pedidosRef = collection(db, "pedidos");
+
+    const q = query(
+      pedidosRef,
+      where("fecha", ">=", inicio),
+      where("fecha", "<=", fin),
+      where("vendedorEmail", "==", usuario?.email || "")
+    );
+
+    const querySnapshot = await getDocs(q);
+    setPedidos(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  };
 
   const agregarPedido = async (pedido) => {
     const fechaAhora = new Date();
@@ -68,6 +89,20 @@ function VendedorView() {
       fecha: Timestamp.fromDate(fechaAhora),
       fechaStr: format(fechaAhora, "dd/MM/yyyy HH:mm"),
     });
+    cargarCantidadPedidos(fechaSeleccionada);
+    cargarPedidos(fechaSeleccionada);
+  };
+
+  const actualizarPedido = async (pedidoActualizado) => {
+    const ref = doc(db, "pedidos", pedidoActualizado.id);
+    await updateDoc(ref, pedidoActualizado);
+    cargarPedidos(fechaSeleccionada);
+    setPedidoAEditar(null);
+  };
+
+  const eliminarPedido = async (id) => {
+    await deleteDoc(doc(db, "pedidos", id));
+    cargarPedidos(fechaSeleccionada);
     cargarCantidadPedidos(fechaSeleccionada);
   };
 
@@ -83,26 +118,6 @@ function VendedorView() {
       return nuevoModo;
     });
   };
-
-const [pedidos, setPedidos] = useState([]);
-
-const cargarPedidos = async (fecha) => {
-  const inicio = Timestamp.fromDate(startOfDay(fecha));
-  const fin = Timestamp.fromDate(endOfDay(fecha));
-  const pedidosRef = collection(db, "pedidos");
-
-  const q = query(
-    pedidosRef,
-    where("fecha", ">=", inicio),
-    where("fecha", "<=", fin),
-    where("vendedorEmail", "==", usuario?.email || "")
-  );
-
-  const querySnapshot = await getDocs(q);
-  setPedidos(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-};
-
-
 
   return (
     <div className={darkMode ? "bg-dark text-light min-vh-100" : "bg-light text-dark min-vh-100"}>
@@ -132,13 +147,26 @@ const cargarPedidos = async (fecha) => {
           </div>
         </div>
 
-        <PedidoForm onAgregar={agregarPedido} />
+        <PedidoForm
+          onAgregar={agregarPedido}
+          onActualizar={actualizarPedido}
+          pedidoAEditar={pedidoAEditar}
+        />
+
+        {pedidoAEditar && (
+          <button className="btn btn-outline-secondary w-100 mt-2" onClick={() => setPedidoAEditar(null)}>
+            ❌ Cancelar edición
+          </button>
+        )}
+
+        <hr className="my-4" />
+        <h4 className="mb-3">📋 Tus pedidos del día</h4>
+        <PedidoTabla
+          pedidos={pedidos}
+          onEditar={setPedidoAEditar}
+          onEliminar={eliminarPedido}
+        />
       </div>
-
-
-      <hr className="my-4" />
-<h4 className="mb-3">📋 Tus pedidos del día</h4>
-<PedidoTabla pedidos={pedidos} mostrarVendedor={false} />
     </div>
   );
 }
