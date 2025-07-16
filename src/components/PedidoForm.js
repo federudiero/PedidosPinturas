@@ -168,71 +168,123 @@ const PedidoForm = ({ onAgregar, onActualizar, pedidoAEditar }) => {
     setProductosSeleccionados([]);
   };
 
-  const onSubmit = () => {
-    if (errorNombre || errorTelefono) {
-      return Swal.fire("❌ Corregí los errores antes de enviar el pedido.");
-    }
+ const onSubmit = () => {
+  // Validaciones fuertes
+  if (
+    !nombre.trim() ||
+    !telefono.trim() ||
+    !direccion.trim() ||
+    productosSeleccionados.length === 0 ||
+    errorNombre ||
+    errorTelefono
+  ) {
+    return Swal.fire("❌ Por favor completá todos los campos requeridos y agregá al menos un producto.");
+  }
 
-    const { resumen, total } = calcularResumenPedido();
-    const pedidoFinal = `${resumen} | TOTAL: $${total}`;
+  const { resumen, total } = calcularResumenPedido();
+  const pedidoFinal = `${resumen} | TOTAL: $${total}`;
 
-    const pedidoConProductos = {
-      nombre,
-      telefono,
-      partido,
-      direccion,
-      entreCalles,
-      pedido: pedidoFinal,
-    };
-
-    pedidoAEditar ? onActualizar({ ...pedidoAEditar, ...pedidoConProductos }) : onAgregar(pedidoConProductos);
-
-    resetFormulario();
+  const pedidoConProductos = {
+    nombre,
+    telefono,
+    partido,
+    direccion,
+    entreCalles,
+    pedido: pedidoFinal,
+    coordenadas,
   };
 
+  pedidoAEditar
+    ? onActualizar({ ...pedidoAEditar, ...pedidoConProductos })
+    : onAgregar(pedidoConProductos);
+
+  resetFormulario();
+};
   return isLoaded ? (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="mb-5">
+<form
+  onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") e.preventDefault();
+  }}
+  className="mb-5"
+>
       <div className="row g-4">
         <div className="col-md-6">
-          <div className="card shadow-sm p-4">
-            <h5 className="mb-3">🧑 Datos del cliente</h5>
+  <div className="card shadow-sm p-4 rounded-4 bg-light">
+    <h5 className="mb-4 fw-bold fs-4">🧑 Datos del cliente</h5>
 
-            <label>👤 Nombre</label>
-            <input className="form-control mb-1" value={nombre} onChange={(e) => {
-              const val = e.target.value;
-              setNombre(val);
-              setErrorNombre(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val) ? "" : "❌ Solo letras y espacios.");
-            }} />
-            {errorNombre && <small className="text-danger">{errorNombre}</small>}
+    <div className="mb-3">
+      <label className="form-label"> Nombre</label>
+      <div className="input-group">
+        <span className="input-group-text">👤</span>
+        <input className="form-control" value={nombre} onChange={(e) => {
+          const val = e.target.value;
+          setNombre(val);
+          setErrorNombre(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(val) ? "" : "❌ Solo letras y espacios.");
+        }} />
+      </div>
+      {errorNombre && <div className="text-danger small mt-1">{errorNombre}</div>}
+    </div>
 
-            <label className="mt-3">🏠 Calle y Altura</label>
-            <Autocomplete onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)} onPlaceChanged={handlePlaceChanged}>
-              <input className="form-control mb-3" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Buscar dirección" />
-            </Autocomplete>
+    <div className="mb-3">
+  <label className="form-label"> Calle y Altura</label>
+  <div className="input-group">
+    <span className="input-group-text">🏠</span>
+   <div style={{ flex: 1 }}>
+  <Autocomplete
+    onLoad={(autocomplete) => (autoCompleteRef.current = autocomplete)}
+    onPlaceChanged={handlePlaceChanged}
+  >
+    <input
+      className="form-control px-3 py-2"
+      style={{ fontSize: "16px", width: "100%" }}
+      value={direccion}
+      onChange={(e) => setDireccion(e.target.value)}
+      placeholder="Buscar dirección"
+    />
+  </Autocomplete>
+</div>
+  </div>
+</div>
 
-            {coordenadas && (
-              <div className="mb-3" style={{ height: "200px" }}>
-                <GoogleMap mapContainerStyle={{ width: "100%", height: "100%" }} center={coordenadas} zoom={16}>
-                  <Marker position={coordenadas} />
-                </GoogleMap>
-              </div>
-            )}
+    {coordenadas && (
+      <div className="mb-3 rounded overflow-hidden border" style={{ height: "200px" }}>
+        <GoogleMap mapContainerStyle={{ width: "100%", height: "100%" }} center={coordenadas} zoom={16}>
+          <Marker position={coordenadas} />
+        </GoogleMap>
+      </div>
+    )}
 
-            <label>🗒️ Observación (Entre calles)</label>
-            <input className="form-control mb-3" value={entreCalles} onChange={(e) => setEntreCalles(e.target.value)} />
+    <div className="mb-3">
+      <label className="form-label"> Observación (Entre calles)</label>
+      <div className="input-group">
+        <span className="input-group-text">🗒️</span>
+        <input className="form-control" value={entreCalles} onChange={(e) => setEntreCalles(e.target.value)} />
+      </div>
+    </div>
 
-            <label>🌆 Ciudad o partido</label>
-            <input className="form-control mb-3" value={partido} onChange={(e) => setPartido(e.target.value)} />
+    <div className="mb-3">
+      <label className="form-label"> Ciudad o partido</label>
+      <div className="input-group">
+        <span className="input-group-text">🌆</span>
+        <input className="form-control" value={partido} onChange={(e) => setPartido(e.target.value)} />
+      </div>
+    </div>
 
-            <label className="mt-3">📞 Teléfono</label>
-            <input className="form-control mb-1" value={telefono} onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "");
-              setTelefono(val);
-              setErrorTelefono(/^[0-9]{6,15}$/.test(val) ? "" : "❌ Solo números (6 a 15 dígitos).");
-            }} />
-            {errorTelefono && <small className="text-danger">{errorTelefono}</small>}
-          </div>
-        </div>
+    <div className="mb-3">
+      <label className="form-label"> Teléfono</label>
+      <div className="input-group">
+        <span className="input-group-text">📞</span>
+        <input className="form-control" value={telefono} onChange={(e) => {
+          const val = e.target.value.replace(/\D/g, "");
+          setTelefono(val);
+          setErrorTelefono(/^[0-9]{6,15}$/.test(val) ? "" : "❌ Solo números (6 a 15 dígitos).");
+        }} />
+      </div>
+      {errorTelefono && <div className="text-danger small mt-1">{errorTelefono}</div>}
+    </div>
+  </div>
+</div>
 
         <div className="col-md-6">
           <div className="card shadow-sm p-4">

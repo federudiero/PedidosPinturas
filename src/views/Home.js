@@ -15,7 +15,7 @@ function Home() {
   style={{ width: "180px", height: "180px", objectFit: "cover" }}
 />
 
-      <h1 className="mb-4 display-4 fw-bold text-gradient">📦 Sistema de Pedidos</h1>
+      <h1 className="mb-4 display-4 fw-bold ">📦 Sistema de Pedidos</h1>
       <p className="lead mb-5">Seleccioná tu tipo de acceso</p>
 
       <div className="row justify-content-center g-4">

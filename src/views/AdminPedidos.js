@@ -2,12 +2,22 @@ import React, { useEffect, useState } from "react";
 import PedidoTabla from "../components/PedidoTabla";
 import ExportarExcel from "../components/ExportarExcel";
 import { db } from "../firebase/firebase";
-import { collection, getDocs, query, where, Timestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  Timestamp,
+  doc,
+  deleteDoc,
+  updateDoc
+} from "firebase/firestore";
 import { startOfDay, endOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 import { FaMoon, FaSun } from "react-icons/fa";
+import EditarPedidoModal from "../components/EditarPedidoModal";
 
 function AdminPedidos() {
   const navigate = useNavigate();
@@ -20,6 +30,9 @@ function AdminPedidos() {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("modoOscuro") === "true";
   });
+
+  const [modalVisible, setModalVisible] = useState(false);
+const [pedidoAEditar, setPedidoAEditar] = useState(null);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -45,12 +58,12 @@ function AdminPedidos() {
   const q = query(pedidosRef, where("fecha", ">=", inicio), where("fecha", "<=", fin));
   const querySnapshot = await getDocs(q);
 
-  const data = querySnapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((pedido) => {
-      const ciudad = pedido.partido?.toLowerCase();
-      return ciudad === "cordoba" || ciudad === "córdoba" || ciudad === "buenos aires";
-    });
+  const data = querySnapshot.docs.map(docSnap => ({
+    ...docSnap.data(),
+    id: docSnap.id
+  }));
+
+  console.log("Pedidos cargados:", data);
 
   setPedidos(data);
   setLoading(false);
@@ -73,31 +86,35 @@ function AdminPedidos() {
   const cerrarSesion = () => {
     localStorage.removeItem("adminAutenticado");
     localStorage.removeItem("fechaSeleccionadaAdmin");
-    navigate("/admin");
+    navigate("/");
   };
 
   const eliminarPedido = async (id) => {
     if (window.confirm("¿Seguro que querés eliminar este pedido?")) {
       try {
         await deleteDoc(doc(db, "pedidos", id));
-        cargarPedidosPorFecha(fechaSeleccionada); // recargar
+        cargarPedidosPorFecha(fechaSeleccionada);
       } catch (error) {
         alert("❌ Error al eliminar: " + error.message);
       }
     }
   };
 
-  const editarPedido = async (pedido) => {
-    const nuevoTexto = prompt("Editar pedido:", pedido.pedido);
-    if (nuevoTexto !== null) {
-      try {
-        await updateDoc(doc(db, "pedidos", pedido.id), { pedido: nuevoTexto });
-        cargarPedidosPorFecha(fechaSeleccionada);
-      } catch (error) {
-        alert("❌ Error al editar: " + error.message);
-      }
-    }
-  };
+const editarPedido = (pedido) => {
+  setPedidoAEditar(pedido);
+  setModalVisible(true);
+};
+
+const guardarCambios = async (pedidoEditado) => {
+  try {
+    const { id, ...resto } = pedidoEditado;
+    await updateDoc(doc(db, "pedidos", id), resto);
+    setModalVisible(false);
+    cargarPedidosPorFecha(fechaSeleccionada);
+  } catch (error) {
+    alert("❌ Error al guardar cambios: " + error.message);
+  }
+};
 
   return (
     <div className={darkMode ? "bg-dark text-light min-vh-100" : "bg-light text-dark min-vh-100"}>
@@ -112,8 +129,8 @@ function AdminPedidos() {
               Cerrar sesión
             </button>
             <button className="btn btn-outline-info" onClick={() => navigate("/admin/dividir-pedidos")}>
-  🗂 División de Pedidos
-</button>
+              🗂 División de Pedidos
+            </button>
             <button className="btn btn-outline-secondary" onClick={() => navigate("/")}>
               ⬅ Volver a zona de pedidos
             </button>
@@ -145,6 +162,13 @@ function AdminPedidos() {
           <p className="text-muted mt-4">No hay pedidos para esta fecha.</p>
         )}
       </div>
+
+      <EditarPedidoModal
+  show={modalVisible}
+  onClose={() => setModalVisible(false)}
+  pedido={pedidoAEditar}
+  onGuardar={guardarCambios}
+/>
     </div>
   );
 }

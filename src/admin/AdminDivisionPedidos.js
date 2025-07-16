@@ -8,18 +8,28 @@ import {
   where,
   Timestamp,
   updateDoc,
-  doc
+  doc,
+  getDoc,
+  deleteField  // 👉 agregalo acá
 } from "firebase/firestore";
 import { startOfDay, endOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 
+
 function AdminDivisionPedidos() {
   const navigate = useNavigate();
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const repartidores = [
+    { label: "R1", email: "repartidor1@gmail.com" },
+    { label: "R2", email: "repartidor2@gmail.com" },
+    { label: "R3", email: "repartidor3@gmail.com" },
+    { label: "R4", email: "repartidor4@gmail.com" },
+  ];
 
   const cargarPedidosPorFecha = async (fecha) => {
     setLoading(true);
@@ -41,12 +51,26 @@ function AdminDivisionPedidos() {
     else cargarPedidosPorFecha(fechaSeleccionada);
   }, [fechaSeleccionada]);
 
-  const handleAsignar = async (pedidoId, campo, valor) => {
-    await updateDoc(doc(db, "pedidos", pedidoId), {
-      [campo]: valor,
-    });
-    cargarPedidosPorFecha(fechaSeleccionada);
-  };
+  const handleAsignar = async (pedidoId, email, asignar) => {
+  const pedidoRef = doc(db, "pedidos", pedidoId);
+  const pedidoSnap = await getDoc(pedidoRef);
+  const pedidoData = pedidoSnap.data();
+
+  const actual = Array.isArray(pedidoData.asignadoA) ? pedidoData.asignadoA : [];
+  const nuevo = asignar
+    ? [...new Set([...actual, email])]
+    : actual.filter(e => e !== email);
+
+  await updateDoc(pedidoRef, { asignadoA: nuevo });
+
+  // 🔍 Verificar si ya no tiene repartidores asignados
+  if (nuevo.length === 0) {
+    await updateDoc(pedidoRef, { ordenRuta: deleteField() });
+  }
+
+  cargarPedidosPorFecha(fechaSeleccionada);
+};
+
 
   return (
     <div className="container py-4">
@@ -65,48 +89,43 @@ function AdminDivisionPedidos() {
         <p>Cargando pedidos...</p>
       ) : (
         <table className="table table-bordered table-hover align-middle">
-  <thead className="table-dark">
-    <tr>
-      <th>👤 Cliente</th>
-      <th>📌 Dirección</th>
-      <th>📝 Pedido</th>
-      <th className="text-center">R1</th>
-      <th className="text-center">R2</th>
-      <th className="text-center">R3</th>
-      <th className="text-center">R4</th>
-    </tr>
-  </thead>
-  <tbody>
-    {pedidos.map((p) => (
-      <tr
-        key={p.id}
-        className={
-          p.repartidor1 || p.repartidor2 || p.repartidor3 || p.repartidor4
-            ? "table-success"
-            : ""
-        }
-      >
-        <td><strong>{p.nombre}</strong></td>
-        <td>{p.direccion}</td>
-        <td style={{ whiteSpace: 'pre-wrap' }}>
-          {p.pedido?.replace(/\| TOTAL: \$([\d\.]+)/, '| TOTAL: $' + '<strong>$1</strong>')}
-        </td>
-        {[1, 2, 3, 4].map((n) => (
-          <td key={n} className="text-center">
-            <input
-              type="checkbox"
-              checked={p[`repartidor${n}`] || false}
-              onChange={(e) => handleAsignar(p.id, `repartidor${n}`, e.target.checked)}
-            />
-          </td>
-        ))}
-      </tr>
-    ))}
-  </tbody>
-</table>
+          <thead className="table-dark">
+            <tr>
+              <th>👤 Cliente</th>
+              <th>📌 Dirección</th>
+              <th>📝 Pedido</th>
+              {repartidores.map((r) => (
+                <th key={r.email} className="text-center">{r.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pedidos.map((p) => (
+              <tr
+                key={p.id}
+                className={p.asignadoA?.length > 0 ? "table-success" : ""}
+              >
+                <td><strong>{p.nombre}</strong></td>
+                <td>{p.direccion}</td>
+                <td style={{ whiteSpace: 'pre-wrap' }}>{p.pedido}</td>
+                {repartidores.map((r) => (
+                  <td key={r.email} className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={p.asignadoA?.includes(r.email) || false}
+                      onChange={(e) => handleAsignar(p.id, r.email, e.target.checked)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
-      <button className="btn btn-secondary mt-3" onClick={() => navigate("/admin/pedidos")}>⬅ Volver a pedidos</button>
+      <button className="btn btn-secondary mt-3" onClick={() => navigate("/admin/pedidos")}>
+        ⬅ Volver a pedidos
+      </button>
     </div>
   );
 }

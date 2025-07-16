@@ -1,106 +1,53 @@
-// src/views/AdminLogin.js
 import React, { useState } from "react";
+import { auth } from "../firebase/firebase";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../firebase/firebase";
-import Swal from "sweetalert2";
+
+const correosAdmins = [
+  "federudiero@gmail.com",
+  "admin2@mail.com",
+  "admin3@mail.com"
+];
 
 function AdminLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const [error, setError] = useState("");
 
-  const adminsPermitidos = [
-    "federudiero@gmail.com",
-    "admin2@mail.com",
-    "admin3@mail.com",
-  ];
+  const iniciarSesion = async () => {
+    const provider = new GoogleAuthProvider();
 
-  const showAlert = (mensaje, icon = "error") => {
-    Swal.fire({
-      title: mensaje,
-      icon,
-      confirmButtonText: "OK",
-      confirmButtonColor: "#3085d6",
-    });
-  };
-
-  const handleLogin = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      if (adminsPermitidos.includes(userCredential.user.email)) {
+      const resultado = await signInWithPopup(auth, provider);
+      const email = resultado.user.email;
+
+      if (correosAdmins.includes(email)) {
         localStorage.setItem("adminAutenticado", "true");
         navigate("/admin/pedidos");
       } else {
-        showAlert("❌ No tenés permisos de administrador");
+        setError("❌ Este usuario no está autorizado como administrador.");
+        await auth.signOut(); // Cierra sesión si no es admin
       }
-    } catch (error) {
-      showAlert("❌ Error al ingresar: " + error.message);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const emailGoogle = result.user.email;
-
-      if (adminsPermitidos.includes(emailGoogle)) {
-        localStorage.setItem("adminAutenticado", "true");
-        navigate("/admin/pedidos");
-      } else {
-        showAlert(
-          "❌ No tenés permisos de administrador con esta cuenta de Google"
-        );
-      }
-    } catch (error) {
-      showAlert("❌ Error con Google: " + error.message);
+    } catch (err) {
+      setError("❌ Error al iniciar sesión.");
+      console.error(err);
     }
   };
 
   return (
-    <div className="container d-flex justify-content-center align-items-center py-5">
-      <div className="card p-4 shadow" style={{ maxWidth: 450, width: "100%" }}>
-        <h2 className="mb-4 text-center text-primary">🔐 Acceso Administrador</h2>
+    <div className="container text-center py-5">
+      <h2>🔐 Acceso Administrador</h2>
+      <p>Iniciá sesión con una cuenta autorizada para acceder a los pedidos.</p>
 
-        <input
-          type="email"
-          className="form-control mb-3"
-          placeholder="Correo del administrador"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          type="password"
-          className="form-control mb-3"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleLogin();
-          }}
-        />
-
-        <div className="d-grid gap-2 mb-3">
-          <button className="btn btn-primary" onClick={handleLogin}>
-            Ingresar
-          </button>
-          <button className="btn btn-danger" onClick={handleGoogleLogin}>
-            Iniciar como Admin con Google 🚀
-          </button>
-        </div>
-
-        <button
-          className="btn btn-outline-secondary w-100"
-          onClick={() => navigate("/")}
-        >
+      <div className="d-grid gap-2 col-6 mx-auto mb-3">
+        <button className="btn btn-dark" onClick={iniciarSesion}>
+          Iniciar sesión con Google
+        </button>
+        <button className="btn btn-outline-secondary" onClick={() => navigate("/")}>
           ⬅ Volver al inicio
         </button>
       </div>
+
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
     </div>
   );
 }
